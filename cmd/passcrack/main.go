@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/TOMOFUMI-KONDO/passcrack"
 )
@@ -19,10 +20,14 @@ func main() {
 		log.Fatalf("failed to parse %s: %w", os.Args[2], err)
 	}
 
+	start := time.Now()
+
 	ans, err := passcrack.Run(lenFrom, lenTo)
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	fmt.Printf("Elapsed: %s\n", time.Since(start))
 
 	fmt.Printf("Answer: %s\n", ans)
 }

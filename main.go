@@ -2,6 +2,7 @@ package passcrack
 
 import (
 	"fmt"
+	"log"
 	"math"
 )
 
@@ -18,30 +19,58 @@ func Run(lenFrom, lenTo int) (string, error) {
 	chars = append(chars, lowers...)
 	chars = append(chars, uppers...)
 
-	var ans string
+	for len_ := lenFrom; len_ <= lenTo; len_++ {
+		var th uint64
+		for th = 0; th < uint64(math.Pow(float64(len(chars)), float64(len_))); th++ {
+			pass := genPass(len_, th, chars)
 
-	for i := lenFrom; i <= lenTo; i++ {
-		var j int64
-		for j = 0; j < int64(math.Pow(float64(len(chars)), float64(i))); j++ {
-			pass := gen(i, j, chars)
-
-			res, err := send(pass)
+			res, err := crack(pass)
 			if err != nil {
 				return "", fmt.Errorf("failed to send: %w", err)
 			}
 
 			if res {
-				ans = pass
+				return pass, nil
 			}
 		}
 	}
 
-	return ans, nil
+	return "", fmt.Errorf("password was not found")
 }
 
-func gen(length int, th int64, chars []rune) string {
+func RunConcurrent(lenFrom, lenTo int) (string, error) {
+	chars := make([]rune, 0)
+	chars = append(chars, nums...)
+	chars = append(chars, lowers...)
+	chars = append(chars, uppers...)
+
+	ans := make(chan string, 1)
+
+	for len_ := lenFrom; len_ <= lenTo; len_++ {
+		var th uint64
+		for th = 0; th < uint64(math.Pow(float64(len(chars)), float64(len_))); th++ {
+			go func(i int, j uint64) {
+				pass := genPass(i, j, chars)
+
+				res, err := crack(pass)
+				if err != nil {
+					log.Printf("failed to send: %v", err)
+					return
+				}
+
+				if res {
+					ans <- pass
+				}
+			}(len_, th)
+		}
+	}
+
+	return <-ans, nil
+}
+
+func genPass(length int, th uint64, chars []rune) string {
 	pass := make([]rune, 0, length)
-	charLen := int64(len(chars))
+	charLen := uint64(len(chars))
 
 	for i := 0; i < length; i++ {
 		pass = append(pass, chars[th%charLen])
@@ -51,6 +80,6 @@ func gen(length int, th int64, chars []rune) string {
 	return string(pass)
 }
 
-func send(pass string) (bool, error) {
-	return pass == "abcd", nil
+func crack(pass string) (bool, error) {
+	return pass == "ZZZZ", nil
 }
